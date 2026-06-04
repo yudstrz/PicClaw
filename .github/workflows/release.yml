@@ -39,8 +39,16 @@ jobs:
         # Mengunduh paket-paket Flutter yang dideklarasikan di pubspec.yaml
 
       - name: Build Release APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release > build_log.txt 2>&1
         # Melakukan kompilasi aplikasi Flutter menjadi berkas biner Android (APK) dalam mode rilis
+
+      - name: Upload Build Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: build_log.txt
 
       - name: Rename Release Artifact
         run: |
