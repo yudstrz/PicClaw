@@ -1,0 +1,65 @@
+name: Build and Release Android APK
+
+on:
+  push:
+    tags:
+      - 'v*' # Memicu alur kerja hanya ketika ada tag baru dengan awalan 'v' yang didorong
+
+jobs:
+  build-and-release:
+    name: Build APK and Create Github Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Memberikan izin menulis untuk membuat rilis dan mengunggah aset
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        # Langkah untuk mengunduh kode sumber repositori ke runner runner GitHub Actions
+
+      - name: Setup Java Development Kit (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17' # JDK 17 direkomendasikan untuk sistem kompilasi Gradle pada Flutter modern
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # Menggunakan versi SDK Flutter yang stabil
+          cache: true # Mengaktifkan caching bawaan untuk Flutter SDK dan dependensi pub
+
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v3
+        # Langkah untuk mengotomatisasi caching Gradle wrapper dan dependensi Android untuk mempercepat build selanjutnya
+
+      - name: Install Project Dependencies
+        run: flutter pub get
+        # Mengunduh paket-paket Flutter yang dideklarasikan di pubspec.yaml
+
+      - name: Build Release APK
+        run: flutter build apk --release
+        # Melakukan kompilasi aplikasi Flutter menjadi berkas biner Android (APK) dalam mode rilis
+
+      - name: Rename Release Artifact
+        run: |
+          # Ekstraksi nama tag (misal: v1.0.0) dari referensi git
+          TAG_NAME=${GITHUB_REF##*/}
+          # Mengubah nama berkas keluaran default agar memuat versi SemVer
+          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/PicClaw-${TAG_NAME}.apk
+          # Menyimpan jalur berkas baru dan nama tag ke dalam variabel lingkungan GitHub
+          echo "RELEASE_APK_PATH=build/app/outputs/flutter-apk/PicClaw-${TAG_NAME}.apk" >> $GITHUB_ENV
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release and Upload Artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.RELEASE_APK_PATH }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Token otentikasi otomatis bawaan GitHub untuk otorisasi unggahan aset rilis
