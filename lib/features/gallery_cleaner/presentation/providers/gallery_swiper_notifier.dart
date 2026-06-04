@@ -35,6 +35,10 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
   /// ensuring resume works correctly even when the offset drifts due to deletions.
   final Set<String> _swipedIdsCache = {};
 
+  /// Tracks the batch start offset for each asset currently in activeQueue.
+  final Queue<int> _itemBatchOffsets = Queue();
+  int? _lastSwipedBatchOffset;
+
   SwiperNotifier(this._mediaDatasource, this._sessionDbDatasource)
       : super(SwiperState(activeQueue: Queue())) {
     _initialize();
@@ -102,6 +106,9 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       resumedFromIndex: 0,
     );
 
+    _itemBatchOffsets.clear();
+    _lastSwipedBatchOffset = null;
+
     // Rebuild ID cache for the new album context
     _swipedIdsCache
       ..clear()
@@ -151,6 +158,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
 
         if (filtered.isNotEmpty) {
           final newQueue = Queue<AssetEntity>.from(state.activeQueue)..addAll(filtered);
+          _itemBatchOffsets.addAll(List.filled(filtered.length, attempt == 0 ? _currentOffset - assets.length : _currentOffset - assets.length));
           state = state.copyWith(activeQueue: newQueue, isLoading: false);
           return;
         }
@@ -170,6 +178,9 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
     if (state.activeQueue.isEmpty) return;
 
     final swipedAsset = state.activeQueue.removeFirst();
+    final swipedBatchOffset = _itemBatchOffsets.isNotEmpty ? _itemBatchOffsets.removeFirst() : _currentOffset;
+    _lastSwipedBatchOffset = swipedBatchOffset;
+    
     final newPendingCount = state.pendingDeletionCount + (isDelete ? 1 : 0);
     final newIndex = state.currentIndex + 1;
 
@@ -198,9 +209,11 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       );
 
       // Persist session progress so we resume from here next launch
+      // We save the exact batch offset of the NEXT photo in the queue
+      final offsetToSave = _itemBatchOffsets.isNotEmpty ? _itemBatchOffsets.first : _currentOffset;
       await _sessionDbDatasource.saveSessionProgress(
         _albumKey(state.selectedAlbum),
-        _currentOffset,
+        offsetToSave,
         newIndex,
       );
 
@@ -250,6 +263,9 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
     final restoredAsset = state.lastSwipedAsset!;
     final newQueue = Queue<AssetEntity>.from(state.activeQueue);
     newQueue.addFirst(restoredAsset);
+    
+    final restoredBatchOffset = _lastSwipedBatchOffset ?? (_currentOffset > 10 ? _currentOffset - 10 : 0);
+    _itemBatchOffsets.addFirst(restoredBatchOffset);
 
     final wasDelete = state.lastSwipeWasDelete ?? false;
     final newCount = (state.pendingDeletionCount - (wasDelete ? 1 : 0)).clamp(0, double.infinity).toInt();
@@ -262,9 +278,10 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
     await _sessionDbDatasource.removeSwipeStatus(restoredAsset.id);
 
     // Update saved session progress
+    final offsetToSave = _itemBatchOffsets.isNotEmpty ? _itemBatchOffsets.first : _currentOffset;
     await _sessionDbDatasource.saveSessionProgress(
       _albumKey(state.selectedAlbum),
-      _currentOffset,
+      offsetToSave,
       newIndex,
     );
 
@@ -307,6 +324,8 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
 
     // Reset offset and count
     _currentOffset = 0;
+    _itemBatchOffsets.clear();
+    _lastSwipedBatchOffset = null;
     final pendingIds = await _sessionDbDatasource.getPendingDeletionIds();
 
     state = state.copyWith(
@@ -389,6 +408,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       final newQueue = Queue<AssetEntity>.from(state.activeQueue);
       for (final asset in restoredAssets.reversed) {
         newQueue.addFirst(asset);
+        _itemBatchOffsets.addFirst(_currentOffset > 10 ? _currentOffset - 10 : 0); // Approximate offset for restored assets
       }
 
       final pendingIds = await _sessionDbDatasource.getPendingDeletionIds();
