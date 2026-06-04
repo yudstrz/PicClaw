@@ -27,6 +27,18 @@ class _MediaThumbnailState extends ConsumerState<MediaThumbnail> {
     _loadThumbnail();
   }
 
+  @override
+  void didUpdateWidget(covariant MediaThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.asset.id != oldWidget.asset.id) {
+      setState(() {
+        _isLoading = true;
+        _bytes = null;
+      });
+      _loadThumbnail();
+    }
+  }
+
   Future<void> _loadThumbnail() async {
     if (!mounted) return;
     

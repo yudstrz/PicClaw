@@ -4,7 +4,12 @@ import 'package:photo_manager/photo_manager.dart';
 
 abstract class MediaLocalDatasource {
   Future<bool> requestPermissions();
-  Future<List<AssetEntity>> fetchRecentAssets({required int limit, required int offset});
+  Future<List<AssetPathEntity>> fetchAlbums();
+  Future<List<AssetEntity>> fetchRecentAssets({
+    required int limit,
+    required int offset,
+    AssetPathEntity? album,
+  });
   Future<Uint8List?> getMediumResThumbnail(AssetEntity asset);
 }
 
@@ -18,11 +23,8 @@ class MediaLocalDatasourceImpl implements MediaLocalDatasource {
   }
 
   @override
-  Future<List<AssetEntity>> fetchRecentAssets({
-    required int limit,
-    required int offset,
-  }) async {
-    final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
+  Future<List<AssetPathEntity>> fetchAlbums() async {
+    return PhotoManager.getAssetPathList(
       type: RequestType.common, // Fetching both images and videos
       filterOption: FilterOptionGroup(
         imageOption: const FilterOption(
@@ -33,7 +35,19 @@ class MediaLocalDatasourceImpl implements MediaLocalDatasource {
         ],
       ),
     );
+  }
 
+  @override
+  Future<List<AssetEntity>> fetchRecentAssets({
+    required int limit,
+    required int offset,
+    AssetPathEntity? album,
+  }) async {
+    if (album != null) {
+      return album.getAssetListRange(start: offset, end: offset + limit);
+    }
+
+    final List<AssetPathEntity> paths = await fetchAlbums();
     if (paths.isEmpty) return [];
 
     final AssetPathEntity recentPath = paths.first;

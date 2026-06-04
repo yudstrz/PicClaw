@@ -148,6 +148,25 @@ class SwiperCard extends StatelessWidget {
                       fontSize: 13,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.touch_app_rounded,
+                        color: Colors.white.withOpacity(0.45),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Ketuk kartu untuk melihat info detail',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.45),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
