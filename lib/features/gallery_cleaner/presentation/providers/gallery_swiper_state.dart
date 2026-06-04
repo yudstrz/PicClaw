@@ -16,6 +16,7 @@ class SwiperState {
   final AssetPathEntity? selectedAlbum; // Currently selected album/folder
   final DateTimeRange? dateFilter; // Optional date filter for albums
   final int resumedFromIndex; // > 0 if app resumed from a previous session, 0 if fresh start
+  final RequestType requestType; // Determines if showing images or videos
 
   SwiperState({
     required this.activeQueue,
@@ -31,6 +32,7 @@ class SwiperState {
     this.selectedAlbum,
     this.dateFilter,
     this.resumedFromIndex = 0,
+    this.requestType = RequestType.image,
   });
 
   SwiperState copyWith({
@@ -47,6 +49,7 @@ class SwiperState {
     AssetPathEntity? selectedAlbum,
     DateTimeRange? dateFilter,
     int? resumedFromIndex,
+    RequestType? requestType,
   }) {
     return SwiperState(
       activeQueue: activeQueue ?? this.activeQueue,
@@ -62,6 +65,7 @@ class SwiperState {
       selectedAlbum: selectedAlbum ?? this.selectedAlbum,
       dateFilter: dateFilter ?? this.dateFilter,
       resumedFromIndex: resumedFromIndex ?? this.resumedFromIndex,
+      requestType: requestType ?? this.requestType,
     );
   }
 }

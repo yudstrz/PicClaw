@@ -4,7 +4,7 @@ import 'package:photo_manager/photo_manager.dart';
 
 abstract class MediaLocalDatasource {
   Future<bool> requestPermissions();
-  Future<List<AssetPathEntity>> fetchAlbums({DateTime? startDate, DateTime? endDate});
+  Future<List<AssetPathEntity>> fetchAlbums({DateTime? startDate, DateTime? endDate, RequestType type = RequestType.image});
   Future<List<AssetEntity>> fetchRecentAssets({
     required int limit,
     required int offset,
@@ -23,23 +23,30 @@ class MediaLocalDatasourceImpl implements MediaLocalDatasource {
   }
 
   @override
-  Future<List<AssetPathEntity>> fetchAlbums({DateTime? startDate, DateTime? endDate}) async {
-    return PhotoManager.getAssetPathList(
-      type: RequestType.common, // Fetching both images and videos
-      filterOption: FilterOptionGroup(
-        imageOption: const FilterOption(
-          sizeConstraint: SizeConstraint(ignoreSize: false),
-        ),
-        createTimeCond: startDate != null || endDate != null
-            ? DateTimeCond(
-                min: startDate ?? DateTime(1970),
-                max: endDate ?? DateTime.now(),
-              )
-            : DateTimeCond.def(),
-        orders: [
-          const OrderOption(type: OrderOptionType.createDate, asc: false), // Newest first
-        ],
+  Future<List<AssetPathEntity>> fetchAlbums({DateTime? startDate, DateTime? endDate, RequestType type = RequestType.image}) async {
+    final FilterOptionGroup filterGroup = FilterOptionGroup(
+      imageOption: const FilterOption(
+        sizeConstraint: SizeConstraint(ignoreSize: false),
       ),
+      videoOption: const FilterOption(
+        sizeConstraint: SizeConstraint(ignoreSize: false),
+      ),
+      orders: [
+        const OrderOption(type: OrderOptionType.createDate, asc: false), // Newest first
+      ],
+    );
+
+    if (startDate != null || endDate != null) {
+      filterGroup.createTimeCond = DateTimeCond(
+        min: startDate ?? DateTime(1970),
+        max: endDate ?? DateTime.now(),
+      );
+    }
+
+    return PhotoManager.getAssetPathList(
+      type: type,
+      hasAll: true,
+      filterOption: filterGroup,
     );
   }
 

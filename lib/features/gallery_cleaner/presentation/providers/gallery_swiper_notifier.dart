@@ -46,10 +46,11 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
 
   String _albumKey(AssetPathEntity? album) {
     final baseKey = album?.id ?? 'all_recent';
+    final typeKey = state.requestType == RequestType.image ? 'img' : 'vid';
     if (state.dateFilter != null) {
-      return '${baseKey}_${state.dateFilter!.start.millisecondsSinceEpoch}_${state.dateFilter!.end.millisecondsSinceEpoch}';
+      return '${baseKey}_${typeKey}_${state.dateFilter!.start.millisecondsSinceEpoch}_${state.dateFilter!.end.millisecondsSinceEpoch}';
     }
-    return baseKey;
+    return '${baseKey}_$typeKey';
   }
 
   Future<void> _initialize() async {
@@ -70,6 +71,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       albums = await _mediaDatasource.fetchAlbums(
         startDate: state.dateFilter?.start,
         endDate: state.dateFilter?.end,
+        type: state.requestType,
       );
       if (albums.isNotEmpty) {
         selectedAlbum = albums.first;
@@ -157,6 +159,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       final albums = await _mediaDatasource.fetchAlbums(
         startDate: range?.start,
         endDate: range?.end,
+        type: state.requestType,
       );
       
       AssetPathEntity? selectedAlbum;
@@ -179,6 +182,68 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
     } catch (e) {
       debugPrint('Failed to fetch filtered albums: $e');
     }
+
+    await loadNextBatch();
+  }
+
+  /// Changes the media type (image or video) and re-initializes
+  Future<void> changeRequestType(RequestType type) async {
+    if (state.requestType == type) return;
+
+    state = state.copyWith(
+      isLoading: true,
+      requestType: type,
+      activeQueue: Queue(),
+      currentIndex: 0,
+      resumedFromIndex: 0,
+    );
+
+    _currentOffset = 0;
+    _itemBatchOffsets.clear();
+    _lastSwipedBatchOffset = null;
+
+    try {
+      final albums = await _mediaDatasource.fetchAlbums(
+        startDate: state.dateFilter?.start,
+        endDate: state.dateFilter?.end,
+        type: type,
+      );
+      
+      AssetPathEntity? selectedAlbum;
+      int totalCount = 0;
+      if (albums.isNotEmpty) {
+        final currentSelectedId = state.selectedAlbum?.id;
+        selectedAlbum = albums.firstWhere(
+          (a) => a.id == currentSelectedId,
+          orElse: () => albums.first,
+        );
+        totalCount = await selectedAlbum.assetCountAsync;
+      }
+
+      state = state.copyWith(
+        albums: albums,
+        selectedAlbum: selectedAlbum,
+        totalAssetCount: totalCount,
+      );
+    } catch (e) {
+      debugPrint('Failed to fetch albums for new request type: $e');
+    }
+
+    // Rebuild cache for the new context
+    _swipedIdsCache
+      ..clear()
+      ..addAll(await _sessionDbDatasource.getAllSwipedIds());
+
+    // Restore saved position for the new type
+    final albumKey = _albumKey(state.selectedAlbum);
+    final progress = await _sessionDbDatasource.getSessionProgress(albumKey);
+    _currentOffset = progress.offset;
+    final resumedIndex = progress.currentIndex;
+
+    state = state.copyWith(
+      currentIndex: resumedIndex,
+      resumedFromIndex: resumedIndex,
+    );
 
     await loadNextBatch();
   }

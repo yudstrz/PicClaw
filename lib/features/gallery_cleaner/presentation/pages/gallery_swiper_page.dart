@@ -9,6 +9,7 @@ import '../providers/gallery_swiper_notifier.dart';
 import '../providers/gallery_swiper_state.dart';
 import '../providers/update_checker_provider.dart';
 import '../widgets/swiper_card.dart';
+import 'package:video_player/video_player.dart';
 
 
 class GallerySwiperPage extends ConsumerWidget {
@@ -61,18 +62,6 @@ class GallerySwiperPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5353), size: 22),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                'PicClaw',
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                      fontSize: 18,
-                    ),
-              ),
-            ),
           ],
         ),
         actions: [
@@ -182,6 +171,7 @@ class GallerySwiperPage extends ConsumerWidget {
                 children: [
                   _buildFolderSelectorButton(context, state, notifier),
                   _buildDateFilterButton(context, state, notifier),
+                  _buildRequestTypeToggle(context, state, notifier),
                 ],
               ),
               const SizedBox(height: 12),
@@ -613,27 +603,8 @@ class GallerySwiperPage extends ConsumerWidget {
                         maxScale: 4.0,
                         minScale: 0.8,
                         child: Center(
-                          child: asset.type == AssetType.video
-                              ? Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (thumbBytes != null)
-                                      Image.memory(
-                                        thumbBytes,
-                                        fit: BoxFit.contain,
-                                      )
-                                    else
-                                      const Icon(Icons.video_library_rounded, color: Colors.white30, size: 64),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.5),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      padding: const EdgeInsets.all(12),
-                                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
-                                    ),
-                                  ],
-                                )
+                          child: asset.type == AssetType.video && file != null
+                              ? _VideoPlayerWidget(file: file)
                               : file != null
                                   ? Image.file(
                                       file,
@@ -726,7 +697,7 @@ class GallerySwiperPage extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Foto ${state.currentIndex} dari ${state.totalAssetCount}',
+              state.requestType == RequestType.video ? 'Video ${state.currentIndex} dari ${state.totalAssetCount}' : 'Foto ${state.currentIndex} dari ${state.totalAssetCount}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: Colors.white70,
@@ -1958,5 +1929,82 @@ class __PendingDeletionBottomSheetContentState
     final min = seconds ~/ 60;
     final sec = seconds % 60;
     return '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+  }
+}
+
+class _VideoPlayerWidget extends StatefulWidget {
+  final io.File file;
+  const _VideoPlayerWidget({Key? key, required this.file}) : super(key: key);
+
+  @override
+  State<_VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
+  late VideoPlayerController _controller;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.file(widget.file)
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _initialized = true;
+          });
+          _controller.play();
+          _controller.setLooping(true);
+        }
+      }).catchError((e) {
+        debugPrint('Error initializing video player: $e');
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_initialized) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5353)),
+        ),
+      );
+    }
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AspectRatio(
+          aspectRatio: _controller.value.aspectRatio,
+          child: VideoPlayer(_controller),
+        ),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _controller.value.isPlaying ? _controller.pause() : _controller.play();
+            });
+          },
+          child: Container(
+            color: Colors.transparent,
+            alignment: Alignment.center,
+            child: !_controller.value.isPlaying
+                ? Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ],
+    );
   }
 }
