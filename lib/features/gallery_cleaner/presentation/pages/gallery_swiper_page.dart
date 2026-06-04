@@ -915,94 +915,116 @@ class GallerySwiperPage extends ConsumerWidget {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: const Color(0xFF181820),
-          title: const Row(
-            children: [
-              Icon(Icons.system_update_rounded, color: Color(0xFF8B5CF6), size: 28),
-              SizedBox(width: 12),
-              Text(
-                'Pembaruan Tersedia',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Versi baru (${state.latestVersion}) telah dirilis di GitHub. Unduh sekarang untuk mendapatkan fitur terbaru dan perbaikan bug.',
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-              if (state.releaseNotes.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Catatan Rilis:',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  width: double.maxFinite,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      state.releaseNotes,
-                      style: const TextStyle(color: Colors.white60, fontSize: 12),
+        return PopScope(
+          canPop: false, // Prevent back button from dismissing
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            backgroundColor: const Color(0xFF181820),
+            title: const Row(
+              children: [
+                Icon(Icons.system_update_rounded, color: Color(0xFF8B5CF6), size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Pembaruan Wajib',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
                     ),
                   ),
                 ),
               ],
-            ],
-          ),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Nanti',
-                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-              ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final Uri url = Uri.parse(state.downloadUrl);
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8B5CF6),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5353).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFF5353).withOpacity(0.2)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5353), size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Versi ini sudah tidak didukung. Anda harus memperbarui aplikasi untuk melanjutkan.',
+                          style: TextStyle(color: Color(0xFFFF5353), fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Versi baru (${state.latestVersion}) telah dirilis. Unduh dan install untuk mendapatkan fitur terbaru serta perbaikan bug penting.',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                if (state.releaseNotes.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Yang Baru:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 120),
+                    width: double.maxFinite,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        state.releaseNotes,
+                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final Uri url = Uri.parse(state.downloadUrl);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
+                  ),
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text(
+                    'Download & Install Sekarang',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                  ),
                 ),
               ),
-              child: const Text(
-                'Perbarui Sekarang',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
