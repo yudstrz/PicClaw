@@ -50,6 +50,17 @@ jobs:
           name: gradle-build-log
           path: build_log.txt
 
+      - name: Commit and Push Build Log on Failure
+        if: failure()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b build-debug-log || (git checkout build-debug-log && git reset --hard main)
+          cp build_log.txt build_log_failed.txt
+          git add build_log_failed.txt
+          git commit -m "chore: add build log for debugging"
+          git push -f origin build-debug-log
+
       - name: Rename Release Artifact
         run: |
           # Ekstraksi nama tag (misal: v1.0.0) dari referensi git
