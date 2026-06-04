@@ -355,6 +355,7 @@ class GallerySwiperPage extends ConsumerWidget {
                 child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
               ),
             ],
+          ],
         ),
       ),
     );
