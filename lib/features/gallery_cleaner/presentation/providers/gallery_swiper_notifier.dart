@@ -2,7 +2,7 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:sqflite/sqflite.dart';
+
 import '../../data/datasources/media_local_datasource.dart';
 import '../../data/datasources/session_db_datasource.dart';
 import 'gallery_swiper_state.dart';
@@ -245,4 +245,75 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       debugPrint('Error executing final deletion: $e');
     }
   }
+
+  /// Fetches actual AssetEntity objects for all current pending deletion IDs
+  Future<List<AssetEntity>> getPendingDeletionAssets() async {
+    final ids = await _sessionDbDatasource.getPendingDeletionIds();
+    if (ids.isEmpty) return [];
+    try {
+      final List<AssetEntity> results = [];
+      for (final id in ids) {
+        final entity = await AssetEntity.fromId(id);
+        if (entity != null) results.add(entity);
+      }
+      return results;
+    } catch (e) {
+      debugPrint('Failed to get asset list with IDs: $e');
+      return [];
+    }
+  }
+
+  /// Restores multiple assets from the deletion queue (Removes from SQLite, decrements pending count)
+  Future<void> restoreAssetsFromDeletion(List<String> ids) async {
+    if (ids.isEmpty) return;
+    try {
+      for (final id in ids) {
+        await _sessionDbDatasource.removeSwipeStatus(id);
+      }
+      
+      final pendingIds = await _sessionDbDatasource.getPendingDeletionIds();
+      final newCount = pendingIds.length;
+
+      // Dynamic warning management
+      String? newWarning = state.storageWarning;
+      if (newCount < _pendingDeletionWarningThreshold &&
+          newWarning != null &&
+          newWarning.contains('Antrean hapus')) {
+        newWarning = null;
+      }
+
+      state = state.copyWith(
+        pendingDeletionCount: newCount,
+        storageWarning: newWarning,
+      );
+    } catch (e) {
+      debugPrint('Error restoring assets: $e');
+    }
+  }
+
+  /// Permanently deletes specific photo IDs by popping up the native OS delete verification dialog
+  Future<void> executeDeletionForIds(List<String> ids) async {
+    if (ids.isEmpty) return;
+
+    try {
+      final List<String> resultIds = await PhotoManager.editor.deleteWithIds(ids);
+      if (resultIds.isNotEmpty) {
+        for (final id in resultIds) {
+          await _sessionDbDatasource.removeSwipeStatus(id);
+        }
+        
+        final pendingIds = await _sessionDbDatasource.getPendingDeletionIds();
+        
+        state = state.copyWith(
+          totalAssetCount: (state.totalAssetCount - resultIds.length).clamp(0, double.infinity).toInt(),
+          currentIndex: (state.currentIndex - resultIds.length).clamp(0, double.infinity).toInt(),
+          pendingDeletionCount: pendingIds.length,
+          storageWarning: pendingIds.length >= _pendingDeletionWarningThreshold ? state.storageWarning : null,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error executing partial deletion: $e');
+    }
+  }
 }
+

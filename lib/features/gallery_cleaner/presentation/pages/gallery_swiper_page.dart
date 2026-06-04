@@ -59,7 +59,7 @@ class GallerySwiperPage extends ConsumerWidget {
                       ? 'Hapus Permanen Pilihan (${state.pendingDeletionCount})'
                       : 'Antrean Hapus Kosong',
                   onPressed: state.pendingDeletionCount > 0
-                      ? () => _showConfirmDeletionDialog(context, state, notifier)
+                      ? () => _showPendingDeletionDetailBottomSheet(context, state, notifier)
                       : null,
                 ),
                 if (state.pendingDeletionCount > 0)
@@ -149,7 +149,7 @@ class GallerySwiperPage extends ConsumerWidget {
                       ),
                     )
                   : state.activeQueue.isEmpty
-                      ? _buildEmptyState(context, notifier)
+                      ? _buildEmptyState(context, state, notifier)
                       : Column(
                           children: [
                             const SizedBox(height: 8),
@@ -703,7 +703,7 @@ class GallerySwiperPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, SwiperNotifier notifier) {
+  Widget _buildEmptyState(BuildContext context, SwiperState state, SwiperNotifier notifier) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -725,9 +725,11 @@ class GallerySwiperPage extends ConsumerWidget {
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
           const SizedBox(height: 36),
-          // PRINCIPLE 5: Error Prevention (Permanent deletion via separate final dialog approval)
+          // PRINCIPLE 5: Error Prevention (Permanent deletion via separate final dialog approval or view queue details)
           ElevatedButton.icon(
-            onPressed: () => notifier.executeFinalDeletion(),
+            onPressed: state.pendingDeletionCount > 0
+                ? () => _showPendingDeletionDetailBottomSheet(context, state, notifier)
+                : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5353),
               foregroundColor: Colors.white,
@@ -738,9 +740,11 @@ class GallerySwiperPage extends ConsumerWidget {
               elevation: 4,
             ),
             icon: const Icon(Icons.delete_forever_rounded),
-            label: const Text(
-              'Hapus Permanen Foto Pilihan',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            label: Text(
+              state.pendingDeletionCount > 0
+                  ? 'Hapus Permanen Foto Pilihan (${state.pendingDeletionCount})'
+                  : 'Hapus Permanen Foto Pilihan',
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
             ),
           ),
         ],
@@ -886,59 +890,21 @@ class GallerySwiperPage extends ConsumerWidget {
     );
   }
 
-  void _showConfirmDeletionDialog(BuildContext context, SwiperState state, SwiperNotifier notifier) {
-    showDialog(
+  void _showPendingDeletionDetailBottomSheet(
+    BuildContext context,
+    SwiperState state,
+    SwiperNotifier notifier,
+  ) {
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF14141B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: const Color(0xFF181820),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5353), size: 28),
-              SizedBox(width: 12),
-              Text(
-                'Hapus Permanen',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'Apakah Anda yakin ingin menghapus secara permanen ${state.pendingDeletionCount} foto yang telah dipilih dari galeri HP Anda?',
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Batal',
-                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                notifier.executeFinalDeletion();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF5353),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Hapus',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+        return _PendingDeletionBottomSheetContent(
+          notifier: notifier,
         );
       },
     );
@@ -1070,8 +1036,8 @@ class _InteractiveCardState extends State<_InteractiveCard> {
     final double rotation = _dragOffset.dx / 350.0;
     
     // PRINCIPLE 11: Immediate Visual Feedback (Dynamic overlay opacities based on drag)
-    final double deleteOpacity = (-_dragOffset.dx / 150.0).clamp(0.0, 0.85);
-    final double keepOpacity = (_dragOffset.dx / 150.0).clamp(0.0, 0.85);
+    final double deleteOpacity = (-_dragOffset.dx / 90.0).clamp(0.0, 0.85);
+    final double keepOpacity = (_dragOffset.dx / 90.0).clamp(0.0, 0.85);
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -1082,9 +1048,9 @@ class _InteractiveCardState extends State<_InteractiveCard> {
       },
       onPanEnd: (details) {
         // Confirm swipe if drag surpasses threshold, otherwise reset to center
-        if (_dragOffset.dx < -140) {
+        if (_dragOffset.dx < -90) {
           widget.onSwipeLeft();
-        } else if (_dragOffset.dx > 140) {
+        } else if (_dragOffset.dx > 90) {
           widget.onSwipeRight();
         } else {
           setState(() {
@@ -1258,5 +1224,474 @@ class _FolderCoverThumbnailState extends State<_FolderCoverThumbnail> {
         ),
       ),
     );
+  }
+}
+
+class _PendingAssetThumbnail extends StatefulWidget {
+  final AssetEntity asset;
+  const _PendingAssetThumbnail({required this.asset});
+
+  @override
+  State<_PendingAssetThumbnail> createState() => _PendingAssetThumbnailState();
+}
+
+class _PendingAssetThumbnailState extends State<_PendingAssetThumbnail> {
+  Uint8List? _bytes;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThumbnail();
+  }
+
+  Future<void> _loadThumbnail() async {
+    try {
+      final bytes = await widget.asset.thumbnailDataWithSize(const ThumbnailSize(200, 200));
+      if (mounted) {
+        setState(() {
+          _bytes = bytes;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Container(
+        color: Colors.white.withOpacity(0.03),
+        child: const Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white24),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_bytes == null) {
+      return Container(
+        color: Colors.white.withOpacity(0.03),
+        child: const Icon(Icons.broken_image_rounded, color: Colors.white24, size: 20),
+      );
+    }
+
+    return Image.memory(
+      _bytes!,
+      fit: BoxFit.cover,
+      cacheWidth: 200,
+      cacheHeight: 200,
+    );
+  }
+}
+
+class _PendingDeletionBottomSheetContent extends ConsumerStatefulWidget {
+  final SwiperNotifier notifier;
+  const _PendingDeletionBottomSheetContent({required this.notifier});
+
+  @override
+  ConsumerState<_PendingDeletionBottomSheetContent> createState() =>
+      __PendingDeletionBottomSheetContentState();
+}
+
+class __PendingDeletionBottomSheetContentState
+    extends ConsumerState<_PendingDeletionBottomSheetContent> {
+  List<AssetEntity>? _assets;
+  bool _loading = true;
+  final Set<String> _selectedIds = {}; // Stores IDs marked for UNDO/RESTORE
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssets();
+  }
+
+  Future<void> _loadAssets() async {
+    final assets = await widget.notifier.getPendingDeletionAssets();
+    if (mounted) {
+      setState(() {
+        _assets = assets;
+        _loading = false;
+      });
+    }
+  }
+
+  void _toggleSelectAll(bool allSelected) {
+    if (_assets == null) return;
+    setState(() {
+      if (allSelected) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds.addAll(_assets!.map((a) => a.id));
+      }
+    });
+  }
+
+  Future<void> _executeRestore() async {
+    if (_selectedIds.isEmpty) return;
+    final toRestore = _selectedIds.toList();
+    setState(() => _loading = true);
+    await widget.notifier.restoreAssetsFromDeletion(toRestore);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${toRestore.length} foto dipulihkan dari antrean hapus.'),
+          backgroundColor: const Color(0xFF2ECA87),
+        ),
+      );
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _executePartialDelete(List<String> remainingIds) async {
+    if (remainingIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: const Color(0xFF181820),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5353), size: 28),
+            SizedBox(width: 12),
+            Text(
+              'Hapus Permanen',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus secara permanen ${remainingIds.length} foto yang tersisa dari galeri HP Anda?',
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5353),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (mounted) setState(() => _loading = true);
+      await widget.notifier.executeDeletionForIds(remainingIds);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto permanen berhasil dihapus.'),
+            backgroundColor: Color(0xFFFF5353),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double sheetHeight = MediaQuery.of(context).size.height * 0.85;
+
+    if (_loading) {
+      return SizedBox(
+        height: sheetHeight,
+        child: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5353)),
+          ),
+        ),
+      );
+    }
+
+    final assets = _assets ?? [];
+    if (assets.isEmpty) {
+      return SizedBox(
+        height: 300,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.delete_outline_rounded, color: Colors.white24, size: 64),
+              const SizedBox(height: 16),
+              const Text(
+                'Antrean Hapus Kosong',
+                style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.05),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Tutup'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final allSelected = _selectedIds.length == assets.length;
+    final remainingIds = assets.map((a) => a.id).where((id) => !_selectedIds.contains(id)).toList();
+
+    return Container(
+      height: sheetHeight,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Antrean Hapus (${assets.length})',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Centang foto yang ingin dipulihkan (batal hapus).',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: Colors.white10, height: 1),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: () => _toggleSelectAll(allSelected),
+                icon: Icon(
+                  allSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
+                  color: const Color(0xFF8B5CF6),
+                  size: 18,
+                ),
+                label: Text(
+                  allSelected ? 'Batal Pilih Semua' : 'Pilih Semua',
+                  style: const TextStyle(
+                    color: Color(0xFF8B5CF6),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (_selectedIds.isNotEmpty)
+                Text(
+                  '${_selectedIds.length} Terpilih',
+                  style: const TextStyle(
+                    color: Color(0xFF2ECA87),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: GridView.builder(
+              physics: const BouncingScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: assets.length,
+              itemBuilder: (context, index) {
+                final asset = assets[index];
+                final isSelected = _selectedIds.contains(asset.id);
+
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedIds.remove(asset.id);
+                      } else {
+                        _selectedIds.add(asset.id);
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: _PendingAssetThumbnail(asset: asset),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.3),
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.3),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF8B5CF6) : Colors.black38,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? Colors.transparent : Colors.white70,
+                              width: 1.5,
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(3),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 12,
+                                )
+                              : const SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                ),
+                        ),
+                      ),
+                      if (asset.type == AssetType.video)
+                        Positioned(
+                          bottom: 6,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.65),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 10),
+                                const SizedBox(width: 2),
+                                Text(
+                                  _formatDuration(asset.duration),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _selectedIds.isNotEmpty ? _executeRestore : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.white.withOpacity(0.04),
+                    disabledForegroundColor: Colors.white24,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.undo_rounded),
+                  label: Text(
+                    _selectedIds.isNotEmpty
+                        ? 'Pulihkan Terpilih (${_selectedIds.length})'
+                        : 'Pulihkan Terpilih',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: remainingIds.isNotEmpty ? () => _executePartialDelete(remainingIds) : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5353),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.white.withOpacity(0.04),
+                    disabledForegroundColor: Colors.white24,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.delete_forever_rounded),
+                  label: Text(
+                    remainingIds.isNotEmpty
+                        ? 'Hapus Sisanya (${remainingIds.length})'
+                        : 'Hapus Sisanya',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(int seconds) {
+    final min = seconds ~/ 60;
+    final sec = seconds % 60;
+    return '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
   }
 }
