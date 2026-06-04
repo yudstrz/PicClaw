@@ -61,7 +61,10 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
     AssetPathEntity? selectedAlbum;
     int totalCount = 0;
     try {
-      albums = await _mediaDatasource.fetchAlbums();
+      albums = await _mediaDatasource.fetchAlbums(
+        startDate: state.dateFilter?.start,
+        endDate: state.dateFilter?.end,
+      );
       if (albums.isNotEmpty) {
         selectedAlbum = albums.first;
         totalCount = await selectedAlbum.assetCountAsync;
@@ -126,6 +129,50 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       currentIndex: resumedIndex,
       resumedFromIndex: resumedIndex,
     );
+
+    await loadNextBatch();
+  }
+
+  /// Applies a date filter and re-initializes the gallery
+  Future<void> applyDateFilter(DateTimeRange? range) async {
+    state = state.copyWith(
+      isLoading: true,
+      dateFilter: range, // Can be null to clear filter
+      activeQueue: Queue(),
+      currentIndex: 0,
+      resumedFromIndex: 0,
+    );
+
+    _currentOffset = 0;
+    _itemBatchOffsets.clear();
+    _lastSwipedBatchOffset = null;
+
+    try {
+      final albums = await _mediaDatasource.fetchAlbums(
+        startDate: range?.start,
+        endDate: range?.end,
+      );
+      
+      AssetPathEntity? selectedAlbum;
+      int totalCount = 0;
+      if (albums.isNotEmpty) {
+        // Try to keep the same album selected if it still exists in the filtered results
+        final currentSelectedId = state.selectedAlbum?.id;
+        selectedAlbum = albums.firstWhere(
+          (a) => a.id == currentSelectedId,
+          orElse: () => albums.first,
+        );
+        totalCount = await selectedAlbum.assetCountAsync;
+      }
+
+      state = state.copyWith(
+        albums: albums,
+        selectedAlbum: selectedAlbum,
+        totalAssetCount: totalCount,
+      );
+    } catch (e) {
+      debugPrint('Failed to fetch filtered albums: $e');
+    }
 
     await loadNextBatch();
   }

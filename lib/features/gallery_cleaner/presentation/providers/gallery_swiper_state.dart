@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class SwiperState {
@@ -13,6 +14,7 @@ class SwiperState {
   final int pendingDeletionCount; // Count of assets currently marked for deletion
   final List<AssetPathEntity> albums;   // List of all media albums/folders
   final AssetPathEntity? selectedAlbum; // Currently selected album/folder
+  final DateTimeRange? dateFilter; // Optional date filter for albums
   final int resumedFromIndex; // > 0 if app resumed from a previous session, 0 if fresh start
 
   SwiperState({
@@ -27,6 +29,7 @@ class SwiperState {
     this.pendingDeletionCount = 0,
     this.albums = const [],
     this.selectedAlbum,
+    this.dateFilter,
     this.resumedFromIndex = 0,
   });
 
@@ -42,6 +45,7 @@ class SwiperState {
     int? pendingDeletionCount,
     List<AssetPathEntity>? albums,
     AssetPathEntity? selectedAlbum,
+    DateTimeRange? dateFilter,
     int? resumedFromIndex,
   }) {
     return SwiperState(
@@ -56,6 +60,7 @@ class SwiperState {
       pendingDeletionCount: pendingDeletionCount ?? this.pendingDeletionCount,
       albums: albums ?? this.albums,
       selectedAlbum: selectedAlbum ?? this.selectedAlbum,
+      dateFilter: dateFilter ?? this.dateFilter,
       resumedFromIndex: resumedFromIndex ?? this.resumedFromIndex,
     );
   }

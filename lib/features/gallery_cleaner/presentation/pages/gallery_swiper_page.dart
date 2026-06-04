@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/gallery_swiper_notifier.dart';
 import '../providers/gallery_swiper_state.dart';
 import '../providers/update_checker_provider.dart';
@@ -135,6 +136,12 @@ class GallerySwiperPage extends ConsumerWidget {
             tooltip: 'Panduan & Batasan',
             onPressed: () => _showHelpDialog(context),
           ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 22),
+            tooltip: 'Tentang & Update',
+            onPressed: () => _showAppInfoDialog(context, ref),
+          ),
           // Visibility of System Status: Privacy & Sandbox confirmation
           Container(
             margin: const EdgeInsets.only(left: 2, right: 8, top: 12, bottom: 12),
@@ -168,7 +175,14 @@ class GallerySwiperPage extends ConsumerWidget {
           child: Column(
             children: [
               const SizedBox(height: 8),
-              _buildFolderSelectorButton(context, state, notifier),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildFolderSelectorButton(context, state, notifier),
+                  const SizedBox(width: 8),
+                  _buildDateFilterButton(context, state, notifier),
+                ],
+              ),
               const SizedBox(height: 12),
               _buildStorageWarning(context, state, notifier),
               Expanded(
@@ -268,42 +282,91 @@ class GallerySwiperPage extends ConsumerWidget {
   Widget _buildFolderSelectorButton(BuildContext context, SwiperState state, SwiperNotifier notifier) {
     if (state.albums.isEmpty) return const SizedBox.shrink();
 
-    final selected = state.selectedAlbum;
-    final name = selected != null ? selected.name : 'Pilih Folder Analisis';
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: InkWell(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2A35),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: GestureDetector(
         onTap: () => _showFolderSelectorBottomSheet(context, state, notifier),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.12)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.folder_copy_rounded, color: Color(0xFF8B5CF6), size: 18),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.folder_copy_rounded, color: Color(0xFF8B5CF6), size: 20),
+            const SizedBox(width: 12),
+            Text(
+              state.selectedAlbum?.name ?? 'Memuat Folder...',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateFilterButton(BuildContext context, SwiperState state, SwiperNotifier notifier) {
+    final bool hasFilter = state.dateFilter != null;
+    return GestureDetector(
+      onTap: () async {
+        final DateTimeRange? picked = await showDateRangePicker(
+          context: context,
+          initialDateRange: state.dateFilter,
+          firstDate: DateTime(2000),
+          lastDate: DateTime.now(),
+          builder: (context, child) {
+            return Theme(
+              data: ThemeData.dark().copyWith(
+                colorScheme: const ColorScheme.dark(
+                  primary: Color(0xFF8B5CF6),
+                  onPrimary: Colors.white,
+                  surface: Color(0xFF1E1E28),
+                  onSurface: Colors.white,
                 ),
               ),
+              child: child!,
+            );
+          },
+        );
+        if (picked != null) {
+          notifier.applyDateFilter(picked);
+        }
+      },
+      onLongPress: () {
+        if (hasFilter) {
+          notifier.applyDateFilter(null); // Clear filter
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: hasFilter ? const Color(0xFF8B5CF6).withOpacity(0.2) : const Color(0xFF2A2A35),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: hasFilter ? const Color(0xFF8B5CF6) : Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              hasFilter ? Icons.filter_alt_rounded : Icons.filter_alt_outlined, 
+              color: hasFilter ? const Color(0xFF8B5CF6) : Colors.white70, 
+              size: 20
+            ),
+            if (hasFilter) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white60, size: 18),
+              GestureDetector(
+                onTap: () => notifier.applyDateFilter(null),
+                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -1034,124 +1097,160 @@ class GallerySwiperPage extends ConsumerWidget {
     );
   }
 
-  void _showUpdateDialog(BuildContext context, UpdateState state) {
+  void _showUpdateDialog(BuildContext context, UpdateState updateState) {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return PopScope(
-          canPop: false, // Prevent back button from dismissing
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.system_update_rounded, color: Colors.greenAccent, size: 28),
+            SizedBox(width: 12),
+            Text('Update Tersedia!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Versi terbaru ${updateState.latestVersion} sudah bisa diunduh. '
+              'Kami menyarankan Anda untuk memperbarui aplikasi agar mendapatkan fitur terbaru dan perbaikan bug.',
+              style: const TextStyle(color: Colors.white70, height: 1.5),
             ),
-            backgroundColor: const Color(0xFF181820),
-            title: const Row(
-              children: [
-                Icon(Icons.system_update_rounded, color: Color(0xFF8B5CF6), size: 28),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Pembaruan Wajib',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                  ),
+            if (updateState.releaseNotes.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
+                child: Text(
+                  updateState.releaseNotes,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Nanti', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.greenAccent.shade700,
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF5353).withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFF5353).withOpacity(0.2)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5353), size: 18),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Versi ini sudah tidak didukung. Anda harus memperbarui aplikasi untuk melanjutkan.',
-                          style: TextStyle(color: Color(0xFFFF5353), fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final Uri url = Uri.parse(updateState.downloadUrl);
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: const Text('Download APK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAppInfoDialog(BuildContext context, WidgetRef ref) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final String currentVersion = packageInfo.version;
+    final updateState = ref.read(updateCheckerProvider);
+    final updateNotifier = ref.read(updateCheckerProvider.notifier);
+
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E28),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5353), size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'PicClaw',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Versi baru (${state.latestVersion}) telah dirilis. Unduh dan install untuk mendapatkan fitur terbaru serta perbaikan bug penting.',
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                if (state.releaseNotes.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Yang Baru:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Versi saat ini: v$currentVersion',
+                style: const TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 24),
+              if (updateState.isLoading)
+                const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent))
+              else if (updateState.isUpdateAvailable)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text('Update ke ${updateState.latestVersion}'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.greenAccent.shade700,
+                    foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 120),
-                    width: double.maxFinite,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: SingleChildScrollView(
-                      child: Text(
-                        state.releaseNotes,
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
                   onPressed: () async {
-                    final Uri url = Uri.parse(state.downloadUrl);
+                    Navigator.pop(ctx);
+                    final Uri url = Uri.parse(updateState.downloadUrl);
                     if (await canLaunchUrl(url)) {
                       await launchUrl(url, mode: LaunchMode.externalApplication);
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5CF6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                )
+              else
+                Column(
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                        SizedBox(width: 8),
+                        Text('Aplikasi Anda sudah versi terbaru', style: TextStyle(color: Colors.green)),
+                      ],
                     ),
-                    elevation: 4,
-                  ),
-                  icon: const Icon(Icons.download_rounded),
-                  label: const Text(
-                    'Download & Install Sekarang',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                  ),
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white24),
+                      ),
+                      onPressed: () {
+                        updateNotifier.checkForUpdates();
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Mengecek pembaruan...')),
+                        );
+                      },
+                      child: const Text('Cek Pembaruan Ulang'),
+                    )
+                  ],
                 ),
-              ),
             ],
           ),
-        );
-      },
-    );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Tutup', style: TextStyle(color: Colors.white54)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 
