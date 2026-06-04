@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17' # JDK 17 direkomendasikan untuk sistem kompilasi Gradle pada Flutter modern
+          java-version: '21' # JDK 21 direkomendasikan untuk sistem kompilasi Gradle pada Flutter modern
 
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
