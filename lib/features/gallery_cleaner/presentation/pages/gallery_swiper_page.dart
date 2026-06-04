@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/gallery_swiper_notifier.dart';
 import '../providers/gallery_swiper_state.dart';
+import '../providers/update_checker_provider.dart';
 import '../widgets/swiper_card.dart';
 
 
@@ -12,6 +14,13 @@ class GallerySwiperPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(swiperNotifierProvider);
     final notifier = ref.read(swiperNotifierProvider.notifier);
+
+    // Listen for updates and show dialog
+    ref.listen<UpdateState>(updateCheckerProvider, (previous, next) {
+      if (next.isUpdateAvailable && !next.isLoading) {
+        _showUpdateDialog(context, next);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -283,6 +292,104 @@ class GallerySwiperPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showUpdateDialog(BuildContext context, UpdateState state) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: const Color(0xFF181820),
+          title: const Row(
+            children: [
+              Icon(Icons.system_update_rounded, color: Color(0xFF8B5CF6), size: 28),
+              SizedBox(width: 12),
+              Text(
+                'Pembaruan Tersedia',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Versi baru (${state.latestVersion}) telah dirilis di GitHub. Unduh sekarang untuk mendapatkan fitur terbaru dan perbaikan bug.',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              if (state.releaseNotes.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Catatan Rilis:',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  width: double.maxFinite,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      state.releaseNotes,
+                      style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Nanti',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final Uri url = Uri.parse(state.downloadUrl);
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B5CF6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Perbarui Sekarang',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
