@@ -175,11 +175,12 @@ class GallerySwiperPage extends ConsumerWidget {
           child: Column(
             children: [
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _buildFolderSelectorButton(context, state, notifier),
-                  const SizedBox(width: 8),
                   _buildDateFilterButton(context, state, notifier),
                 ],
               ),
@@ -280,8 +281,6 @@ class GallerySwiperPage extends ConsumerWidget {
   }
 
   Widget _buildFolderSelectorButton(BuildContext context, SwiperState state, SwiperNotifier notifier) {
-    if (state.albums.isEmpty) return const SizedBox.shrink();
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -297,7 +296,7 @@ class GallerySwiperPage extends ConsumerWidget {
             const Icon(Icons.folder_copy_rounded, color: Color(0xFF8B5CF6), size: 20),
             const SizedBox(width: 12),
             Text(
-              state.selectedAlbum?.name ?? 'Memuat Folder...',
+              state.albums.isEmpty ? 'Tidak ada Folder' : (state.selectedAlbum?.name ?? 'Memuat Folder...'),
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -850,6 +849,23 @@ class GallerySwiperPage extends ConsumerWidget {
                   ? 'Hapus Permanen Foto Pilihan (${state.pendingDeletionCount})'
                   : 'Hapus Permanen Foto Pilihan',
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => _showFolderSelectorBottomSheet(context, state, notifier),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFF8B5CF6), width: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            icon: const Icon(Icons.folder_copy_rounded, color: Color(0xFF8B5CF6)),
+            label: const Text(
+              'Pilih Folder Lain',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
         ],

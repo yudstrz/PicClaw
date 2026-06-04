@@ -35,7 +35,7 @@ class MediaLocalDatasourceImpl implements MediaLocalDatasource {
                 min: startDate ?? DateTime(1970),
                 max: endDate ?? DateTime.now(),
               )
-            : const DateTimeCond.def(),
+            : DateTimeCond.def(),
         orders: [
           const OrderOption(type: OrderOptionType.createDate, asc: false), // Newest first
         ],

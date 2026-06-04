@@ -44,7 +44,13 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
     _initialize();
   }
 
-  String _albumKey(AssetPathEntity? album) => album?.id ?? 'all_recent';
+  String _albumKey(AssetPathEntity? album) {
+    final baseKey = album?.id ?? 'all_recent';
+    if (state.dateFilter != null) {
+      return '${baseKey}_${state.dateFilter!.start.millisecondsSinceEpoch}_${state.dateFilter!.end.millisecondsSinceEpoch}';
+    }
+    return baseKey;
+  }
 
   Future<void> _initialize() async {
     state = state.copyWith(isLoading: true);
