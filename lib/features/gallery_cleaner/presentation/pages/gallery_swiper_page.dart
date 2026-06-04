@@ -303,60 +303,58 @@ class GallerySwiperPage extends ConsumerWidget {
 
   Widget _buildDateFilterButton(BuildContext context, SwiperState state, SwiperNotifier notifier) {
     final bool hasFilter = state.dateFilter != null;
-    return GestureDetector(
-      onTap: () async {
-        final DateTimeRange? picked = await showDateRangePicker(
-          context: context,
-          initialDateRange: state.dateFilter,
-          firstDate: DateTime(2000),
-          lastDate: DateTime.now(),
-          builder: (context, child) {
-            return Theme(
-              data: ThemeData.dark().copyWith(
-                colorScheme: const ColorScheme.dark(
-                  primary: Color(0xFF8B5CF6),
-                  onPrimary: Colors.white,
-                  surface: Color(0xFF1E1E28),
-                  onSurface: Colors.white,
-                ),
+    return Container(
+      decoration: BoxDecoration(
+        color: hasFilter ? const Color(0xFF8B5CF6).withOpacity(0.2) : const Color(0xFF2A2A35),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: hasFilter ? const Color(0xFF8B5CF6) : Colors.white.withOpacity(0.05)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () async {
+              final DateTimeRange? picked = await showDateRangePicker(
+                context: context,
+                initialDateRange: state.dateFilter,
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now(),
+                builder: (context, child) {
+                  return Theme(
+                    data: ThemeData.dark().copyWith(
+                      colorScheme: const ColorScheme.dark(
+                        primary: Color(0xFF8B5CF6),
+                        onPrimary: Colors.white,
+                        surface: Color(0xFF1E1E28),
+                        onSurface: Colors.white,
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (picked != null) {
+                notifier.applyDateFilter(picked);
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, hasFilter ? 8 : 12, 8),
+              child: Icon(
+                hasFilter ? Icons.filter_alt_rounded : Icons.filter_alt_outlined, 
+                color: hasFilter ? const Color(0xFF8B5CF6) : Colors.white70, 
+                size: 20
               ),
-              child: child!,
-            );
-          },
-        );
-        if (picked != null) {
-          notifier.applyDateFilter(picked);
-        }
-      },
-      onLongPress: () {
-        if (hasFilter) {
-          notifier.applyDateFilter(null); // Clear filter
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: hasFilter ? const Color(0xFF8B5CF6).withOpacity(0.2) : const Color(0xFF2A2A35),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: hasFilter ? const Color(0xFF8B5CF6) : Colors.white.withOpacity(0.05)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              hasFilter ? Icons.filter_alt_rounded : Icons.filter_alt_outlined, 
-              color: hasFilter ? const Color(0xFF8B5CF6) : Colors.white70, 
-              size: 20
             ),
-            if (hasFilter) ...[
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => notifier.applyDateFilter(null),
-                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+          ),
+          if (hasFilter)
+            GestureDetector(
+              onTap: () => notifier.applyDateFilter(null),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(4, 8, 12, 8),
+                child: Icon(Icons.close_rounded, color: Colors.white70, size: 16),
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -1190,89 +1188,90 @@ class GallerySwiperPage extends ConsumerWidget {
   Future<void> _showAppInfoDialog(BuildContext context, WidgetRef ref) async {
     final packageInfo = await PackageInfo.fromPlatform();
     final String currentVersion = packageInfo.version;
-    final updateState = ref.read(updateCheckerProvider);
-    final updateNotifier = ref.read(updateCheckerProvider.notifier);
-
+    
     if (context.mounted) {
       showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5353), size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                'PicClaw',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Versi saat ini: v$currentVersion',
-                style: const TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 24),
-              if (updateState.isLoading)
-                const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent))
-              else if (updateState.isUpdateAvailable)
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.download_rounded),
-                  label: Text('Update ke ${updateState.latestVersion}'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent.shade700,
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        builder: (ctx) => Consumer(
+          builder: (context, ref, _) {
+            final updateState = ref.watch(updateCheckerProvider);
+            final updateNotifier = ref.read(updateCheckerProvider.notifier);
+            
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E1E28),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5353), size: 48),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'PicClaw',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    final Uri url = Uri.parse(updateState.downloadUrl);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                )
-              else
-                Column(
-                  children: [
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Versi saat ini: v$currentVersion',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 24),
+                  if (updateState.isLoading)
+                    const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent))
+                  else if (updateState.isUpdateAvailable)
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.download_rounded),
+                      label: Text('Update ke ${updateState.latestVersion}'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.greenAccent.shade700,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        final Uri url = Uri.parse(updateState.downloadUrl);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                    )
+                  else
+                    Column(
                       children: [
-                        Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-                        SizedBox(width: 8),
-                        Text('Aplikasi Anda sudah versi terbaru', style: TextStyle(color: Colors.green)),
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                            SizedBox(width: 8),
+                            Text('Aplikasi Anda sudah versi terbaru', style: TextStyle(color: Colors.green)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                          ),
+                          onPressed: () {
+                            updateNotifier.checkForUpdates();
+                          },
+                          child: const Text('Cek Pembaruan Ulang'),
+                        )
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white24),
-                      ),
-                      onPressed: () {
-                        updateNotifier.checkForUpdates();
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Mengecek pembaruan...')),
-                        );
-                      },
-                      child: const Text('Cek Pembaruan Ulang'),
-                    )
-                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tutup', style: TextStyle(color: Colors.white54)),
                 ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Tutup', style: TextStyle(color: Colors.white54)),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       );
     }
@@ -1982,6 +1981,17 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
   late VideoPlayerController _controller;
   bool _initialized = false;
 
+  final List<Duration> _skipOptions = const [
+    Duration(seconds: 5),
+    Duration(seconds: 10),
+    Duration(seconds: 15),
+    Duration(seconds: 30),
+    Duration(minutes: 1),
+    Duration(minutes: 10),
+    Duration(minutes: 15),
+  ];
+  int _selectedSkipIndex = 1; // default 10s
+
   @override
   void initState() {
     super.initState();
@@ -1997,12 +2007,40 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
       }).catchError((e) {
         debugPrint('Error initializing video player: $e');
       });
+      
+    _controller.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+  
+  void _skip(Duration amount) {
+    var newPosition = _controller.value.position + amount;
+    if (newPosition < Duration.zero) newPosition = Duration.zero;
+    if (newPosition > _controller.value.duration) newPosition = _controller.value.duration;
+    _controller.seekTo(newPosition);
+  }
+
+  String _formatSkipOption(Duration duration) {
+    if (duration.inMinutes > 0) {
+      return '${duration.inMinutes}m';
+    }
+    return '${duration.inSeconds}s';
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    if (duration.inHours > 0) {
+      return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    }
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
   @override
@@ -2040,6 +2078,117 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
                     child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
                   )
                 : const SizedBox.shrink(),
+          ),
+        ),
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                VideoProgressIndicator(
+                  _controller,
+                  allowScrubbing: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  colors: const VideoProgressColors(
+                    playedColor: Color(0xFF8B5CF6),
+                    bufferedColor: Colors.white24,
+                    backgroundColor: Colors.white12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${_formatDuration(_controller.value.position)} / ${_formatDuration(_controller.value.duration)}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.fast_rewind_rounded, color: Colors.white),
+                          onPressed: () => _skip(-_skipOptions[_selectedSkipIndex]),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF8B5CF6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              _controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _controller.value.isPlaying ? _controller.pause() : _controller.play();
+                              });
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.fast_forward_rounded, color: Colors.white),
+                          onPressed: () => _skip(_skipOptions[_selectedSkipIndex]),
+                        ),
+                      ],
+                    ),
+                    PopupMenuButton<int>(
+                      color: const Color(0xFF2A2A35),
+                      initialValue: _selectedSkipIndex,
+                      onSelected: (int index) {
+                        setState(() {
+                          _selectedSkipIndex = index;
+                        });
+                      },
+                      itemBuilder: (BuildContext context) {
+                        return List.generate(_skipOptions.length, (index) {
+                          return PopupMenuItem<int>(
+                            value: index,
+                            child: Text(
+                              _formatSkipOption(_skipOptions[index]),
+                              style: TextStyle(
+                                color: _selectedSkipIndex == index ? const Color(0xFF8B5CF6) : Colors.white,
+                              ),
+                            ),
+                          );
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatSkipOption(_skipOptions[_selectedSkipIndex]),
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white70, size: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
