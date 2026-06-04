@@ -60,21 +60,13 @@ class SwiperCard extends StatelessWidget {
                       ),
                       if (asset.type == AssetType.video) ...[
                         const SizedBox(width: 4),
-                        FutureBuilder<int>(
-                          future: asset.durationAsync,
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
-                              return Text(
-                                _formatDuration(snapshot.data!),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
+                        Text(
+                          _formatDuration(asset.duration),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ],
@@ -140,7 +132,7 @@ class SwiperCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    asset.title.isNotEmpty ? asset.title : 'Unnamed Asset',
+                    (asset.title != null && asset.title!.isNotEmpty) ? asset.title! : 'Unnamed Asset',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(

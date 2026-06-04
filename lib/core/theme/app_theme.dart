@@ -21,7 +21,7 @@ class AppTheme {
         secondary: secondary,
         surface: surface,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 12,
         shadowColor: Colors.black.withOpacity(0.4),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/gallery_swiper_notifier.dart';
+import '../providers/gallery_swiper_state.dart';
 import '../widgets/swiper_card.dart';
+
 
 class GallerySwiperPage extends ConsumerWidget {
   const GallerySwiperPage({super.key});
