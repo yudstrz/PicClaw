@@ -19,19 +19,27 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 subprojects {
-    afterEvaluate {
-        if (project.hasProperty("android")) {
-            val android = project.extensions.findByName("android")
+    fun injectNamespace(proj: Project) {
+        if (proj.hasProperty("android")) {
+            val android = proj.extensions.findByName("android")
             if (android != null) {
                 val namespaceMethod = android.javaClass.methods.firstOrNull { it.name == "setNamespace" }
                 val getNamespaceMethod = android.javaClass.methods.firstOrNull { it.name == "getNamespace" }
                 if (namespaceMethod != null && getNamespaceMethod != null) {
                     val currentNamespace = getNamespaceMethod.invoke(android)
                     if (currentNamespace == null) {
-                        namespaceMethod.invoke(android, project.group.toString())
+                        namespaceMethod.invoke(android, proj.group.toString())
                     }
                 }
             }
+        }
+    }
+
+    if (state.executed) {
+        injectNamespace(this)
+    } else {
+        afterEvaluate {
+            injectNamespace(this)
         }
     }
 }
