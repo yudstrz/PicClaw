@@ -355,8 +355,45 @@ class GallerySwiperPage extends ConsumerWidget {
                 child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
               ),
             ],
-          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRequestTypeToggle(BuildContext context, SwiperState state, SwiperNotifier notifier) {
+    final isVideo = state.requestType == RequestType.video;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2A35),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => notifier.changeRequestType(RequestType.image),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: !isVideo ? const Color(0xFF8B5CF6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.image_rounded, color: !isVideo ? Colors.white : Colors.white54, size: 20),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => notifier.changeRequestType(RequestType.video),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isVideo ? const Color(0xFF8B5CF6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.videocam_rounded, color: isVideo ? Colors.white : Colors.white54, size: 20),
+            ),
+          ),
+        ],
       ),
     );
   }
