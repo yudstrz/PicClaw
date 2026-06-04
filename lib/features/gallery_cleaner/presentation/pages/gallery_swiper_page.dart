@@ -1058,8 +1058,8 @@ class _InteractiveCardState extends State<_InteractiveCard> {
     final double rotation = _dragOffset.dx / 350.0;
     
     // PRINCIPLE 11: Immediate Visual Feedback (Dynamic overlay opacities based on drag)
-    final double deleteOpacity = (-_dragOffset.dx / 90.0).clamp(0.0, 0.85);
-    final double keepOpacity = (_dragOffset.dx / 90.0).clamp(0.0, 0.85);
+    final double deleteOpacity = (-_dragOffset.dx / 50.0).clamp(0.0, 0.85);
+    final double keepOpacity = (_dragOffset.dx / 50.0).clamp(0.0, 0.85);
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -1070,9 +1070,9 @@ class _InteractiveCardState extends State<_InteractiveCard> {
       },
       onPanEnd: (details) {
         // Confirm swipe if drag surpasses threshold, otherwise reset to center
-        if (_dragOffset.dx < -90) {
+        if (_dragOffset.dx < -50) {
           widget.onSwipeLeft();
-        } else if (_dragOffset.dx > 90) {
+        } else if (_dragOffset.dx > 50) {
           widget.onSwipeRight();
         } else {
           setState(() {
