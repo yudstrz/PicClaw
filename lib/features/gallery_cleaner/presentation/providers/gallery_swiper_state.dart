@@ -13,6 +13,7 @@ class SwiperState {
   final int pendingDeletionCount; // Count of assets currently marked for deletion
   final List<AssetPathEntity> albums;   // List of all media albums/folders
   final AssetPathEntity? selectedAlbum; // Currently selected album/folder
+  final int resumedFromIndex; // > 0 if app resumed from a previous session, 0 if fresh start
 
   SwiperState({
     required this.activeQueue,
@@ -26,6 +27,7 @@ class SwiperState {
     this.pendingDeletionCount = 0,
     this.albums = const [],
     this.selectedAlbum,
+    this.resumedFromIndex = 0,
   });
 
   SwiperState copyWith({
@@ -40,6 +42,7 @@ class SwiperState {
     int? pendingDeletionCount,
     List<AssetPathEntity>? albums,
     AssetPathEntity? selectedAlbum,
+    int? resumedFromIndex,
   }) {
     return SwiperState(
       activeQueue: activeQueue ?? this.activeQueue,
@@ -53,6 +56,7 @@ class SwiperState {
       pendingDeletionCount: pendingDeletionCount ?? this.pendingDeletionCount,
       albums: albums ?? this.albums,
       selectedAlbum: selectedAlbum ?? this.selectedAlbum,
+      resumedFromIndex: resumedFromIndex ?? this.resumedFromIndex,
     );
   }
 }

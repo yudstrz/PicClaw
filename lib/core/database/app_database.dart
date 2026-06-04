@@ -19,8 +19,9 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -50,9 +51,32 @@ class AppDatabase {
       )
     ''');
 
+    // Create session_progress table
+    await db.execute('''
+      CREATE TABLE session_progress (
+        album_id TEXT PRIMARY KEY,
+        offset INTEGER NOT NULL DEFAULT 0,
+        current_index INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
     // Create Indexes for faster swiping query performance
     await db.execute('CREATE INDEX idx_media_status ON media_items(status)');
     await db.execute('CREATE INDEX idx_media_album ON media_items(album_id)');
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS session_progress (
+          album_id TEXT PRIMARY KEY,
+          offset INTEGER NOT NULL DEFAULT 0,
+          current_index INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+    }
   }
 
   Future<void> close() async {

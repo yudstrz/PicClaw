@@ -25,6 +25,33 @@ class GallerySwiperPage extends ConsumerWidget {
       }
     });
 
+    // Show a one-time snackbar when the session is resumed from a saved position
+    ref.listen<int>(
+      swiperNotifierProvider.select((s) => s.resumedFromIndex),
+      (previous, next) {
+        if (next > 0 && (previous == null || previous == 0)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.history_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Melanjutkan dari foto ke-$next 👋',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF8B5CF6),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      },
+    );
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -91,6 +118,11 @@ class GallerySwiperPage extends ConsumerWidget {
                   ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.restart_alt_rounded, color: Colors.white54),
+            tooltip: 'Mulai Ulang dari Foto Pertama',
+            onPressed: () => _showResetProgressDialog(context, notifier),
           ),
           IconButton(
             icon: const Icon(Icons.help_outline_rounded, color: Colors.white70),
@@ -909,6 +941,88 @@ class GallerySwiperPage extends ConsumerWidget {
       },
     );
   }
+  void _showResetProgressDialog(BuildContext context, SwiperNotifier notifier) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.restart_alt_rounded, color: Color(0xFF8B5CF6), size: 26),
+              SizedBox(width: 10),
+              Text(
+                'Mulai dari Awal?',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Posisi swipe akan dikembalikan ke foto pertama di galeri kamu.',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.withOpacity(0.2)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Foto dalam antrean hapus tetap aman — tidak ikut direset.',
+                        style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      notifier.resetProgress();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                    label: const Text('Reset', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showUpdateDialog(BuildContext context, UpdateState state) {
     showDialog(
@@ -1660,7 +1774,7 @@ class __PendingDeletionBottomSheetContentState
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: _selectedIds.isNotEmpty ? _executeRestore : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B5CF6),
@@ -1672,18 +1786,20 @@ class __PendingDeletionBottomSheetContentState
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: const Icon(Icons.undo_rounded),
-                  label: Text(
+                  child: Text(
                     _selectedIds.isNotEmpty
                         ? 'Pulihkan Terpilih (${_selectedIds.length})'
                         : 'Pulihkan Terpilih',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: remainingIds.isNotEmpty ? () => _executePartialDelete(remainingIds) : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF5353),
@@ -1695,12 +1811,14 @@ class __PendingDeletionBottomSheetContentState
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  icon: const Icon(Icons.delete_forever_rounded),
-                  label: Text(
+                  child: Text(
                     remainingIds.isNotEmpty
                         ? 'Hapus Sisanya (${remainingIds.length})'
                         : 'Hapus Sisanya',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
