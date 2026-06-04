@@ -160,96 +160,101 @@ class GallerySwiperPage extends ConsumerWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: state.isLoading && state.activeQueue.isEmpty
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5353)),
-                  ),
-                )
-              : state.errorMessage != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
-                          const SizedBox(height: 16),
-                          Text(
-                            state.errorMessage!,
-                            style: const TextStyle(color: Colors.white70, fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    )
-                  : state.activeQueue.isEmpty
-                      ? _buildEmptyState(context, state, notifier)
-                      : Column(
-                          children: [
-                            const SizedBox(height: 8),
-                            // PRINCIPLE 1: Visibility of System Status (Progress bar & counts)
-                            _buildProgressIndicator(context, state),
-                            const SizedBox(height: 12),
-                            _buildFolderSelectorButton(context, state, notifier),
-                            const SizedBox(height: 12),
-                            _buildStorageWarning(context, state, notifier),
-                            const SizedBox(height: 16),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              _buildFolderSelectorButton(context, state, notifier),
+              const SizedBox(height: 12),
+              _buildStorageWarning(context, state, notifier),
+              Expanded(
+                child: state.isLoading && state.activeQueue.isEmpty
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5353)),
+                        ),
+                      )
+                    : state.errorMessage != null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
+                                const SizedBox(height: 16),
+                                Text(
+                                  state.errorMessage!,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          )
+                        : state.activeQueue.isEmpty
+                            ? _buildEmptyState(context, state, notifier)
+                            : Column(
+                                children: [
+                                  // PRINCIPLE 1: Visibility of System Status (Progress bar & counts)
+                                  _buildProgressIndicator(context, state),
+                                  const SizedBox(height: 16),
 
-                            // PRINCIPLE 6 & 12: Recognition rather than Recall & Aesthetic-Usability Effect (80% Height Card Swiper)
-                            Expanded(
-                              child: Center(
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final list = state.activeQueue.toList();
-                                      return Stack(
-                                        clipBehavior: Clip.none,
-                                        children: List.generate(
-                                          list.length > 3 ? 3 : list.length,
-                                          (index) {
-                                            final reversedIndex = (list.length > 3 ? 3 : list.length) - 1 - index;
-                                            final asset = list[reversedIndex];
-                                            
-                                            // Stack cascade visuals
-                                            final scale = 1.0 - (reversedIndex * 0.045);
-                                            final yOffset = reversedIndex * 16.0;
+                                  // PRINCIPLE 6 & 12: Recognition rather than Recall & Aesthetic-Usability Effect (80% Height Card Swiper)
+                                  Expanded(
+                                    child: Center(
+                                        child: LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            final list = state.activeQueue.toList();
+                                            return Stack(
+                                              clipBehavior: Clip.none,
+                                              children: List.generate(
+                                                list.length > 3 ? 3 : list.length,
+                                                (index) {
+                                                  final reversedIndex = (list.length > 3 ? 3 : list.length) - 1 - index;
+                                                  final asset = list[reversedIndex];
+                                                  
+                                                  // Stack cascade visuals
+                                                  final scale = 1.0 - (reversedIndex * 0.045);
+                                                  final yOffset = reversedIndex * 16.0;
 
-                                            return Positioned.fill(
-                                              key: ValueKey(asset.id),
-                                              child: Align(
-                                                alignment: Alignment.center,
-                                                child: AnimatedContainer(
-                                                  duration: const Duration(milliseconds: 200),
-                                                  curve: Curves.easeOut,
-                                                  transform: Matrix4.identity()
-                                                    ..translate(0.0, yOffset)
-                                                    ..scale(scale),
-                                                  child: reversedIndex == 0
-                                                      ? _InteractiveCard(
-                                                          key: ValueKey(asset.id),
-                                                          child: SwiperCard(asset: asset),
-                                                          onSwipeLeft: () => notifier.swipeCard(isDelete: true),
-                                                          onSwipeRight: () => notifier.swipeCard(isDelete: false),
-                                                          onTap: () => _showMediaDetailDialog(context, asset),
-                                                        )
-                                                      : IgnorePointer(
-                                                          child: SwiperCard(asset: asset),
-                                                        ),
-                                                ),
-                                              ),
+                                                  return Positioned.fill(
+                                                    key: ValueKey(asset.id),
+                                                    child: Align(
+                                                      alignment: Alignment.center,
+                                                      child: AnimatedContainer(
+                                                        duration: const Duration(milliseconds: 200),
+                                                        curve: Curves.easeOut,
+                                                        transform: Matrix4.identity()
+                                                          ..translate(0.0, yOffset)
+                                                          ..scale(scale),
+                                                        child: reversedIndex == 0
+                                                            ? _InteractiveCard(
+                                                                key: ValueKey(asset.id),
+                                                                child: SwiperCard(asset: asset),
+                                                                onSwipeLeft: () => notifier.swipeCard(isDelete: true),
+                                                                onSwipeRight: () => notifier.swipeCard(isDelete: false),
+                                                                onTap: () => _showMediaDetailDialog(context, asset),
+                                                              )
+                                                            : IgnorePointer(
+                                                                child: SwiperCard(asset: asset),
+                                                              ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ), 
                                             );
                                           },
-                                        ), 
-                                      );
-                                    },
-                                  ),),
+                                        ),),
+                                    ),
+                                  
+
+                                  const SizedBox(height: 28),
+
+                                  // PRINCIPLE 9 & 10: Fitts's Law & Hick's Law (Thumb zone action buttons)
+                                  _buildControlBar(context, state, notifier),
+                                  const SizedBox(height: 20),
+                                ],
                               ),
-                            
-
-                            const SizedBox(height: 28),
-
-                            // PRINCIPLE 9 & 10: Fitts's Law & Hick's Law (Thumb zone action buttons)
-                            _buildControlBar(context, state, notifier),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+              ),
+            ],
+          ),
         ),
       ),
     );
