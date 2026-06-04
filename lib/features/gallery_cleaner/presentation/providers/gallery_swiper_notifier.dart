@@ -145,7 +145,8 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
   Future<void> applyDateFilter(DateTimeRange? range) async {
     state = state.copyWith(
       isLoading: true,
-      dateFilter: range, // Can be null to clear filter
+      dateFilter: range,
+      clearDateFilter: range == null,
       activeQueue: Queue(),
       currentIndex: 0,
       resumedFromIndex: 0,
@@ -177,6 +178,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       state = state.copyWith(
         albums: albums,
         selectedAlbum: selectedAlbum,
+        clearSelectedAlbum: albums.isEmpty,
         totalAssetCount: totalCount,
       );
     } catch (e) {
@@ -223,6 +225,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       state = state.copyWith(
         albums: albums,
         selectedAlbum: selectedAlbum,
+        clearSelectedAlbum: albums.isEmpty,
         totalAssetCount: totalCount,
       );
     } catch (e) {
@@ -418,6 +421,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       currentIndex: newIndex,
       pendingDeletionCount: newCount,
       storageWarning: newWarning,
+      clearStorageWarning: newWarning == null,
     );
   }
 
@@ -450,10 +454,10 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
       activeQueue: Queue(),
       currentIndex: 0,
       resumedFromIndex: 0,
-      lastSwipedAsset: null,
-      lastSwipeWasDelete: null,
+      clearLastSwipedAsset: true,
+      clearLastSwipeWasDelete: true,
       pendingDeletionCount: pendingIds.length,
-      storageWarning: null,
+      clearStorageWarning: true,
     );
 
     await loadNextBatch();
@@ -461,7 +465,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
 
   /// Manually clears/dismisses the active storage warning banner
   void dismissStorageWarning() {
-    state = state.copyWith(storageWarning: null);
+    state = state.copyWith(clearStorageWarning: true);
   }
 
   /// Permanently deletes all photos tracked in the PENDING_DELETION table
@@ -482,7 +486,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
           totalAssetCount: (state.totalAssetCount - resultIds.length).clamp(0, double.infinity).toInt(),
           currentIndex: (state.currentIndex - resultIds.length).clamp(0, double.infinity).toInt(),
           pendingDeletionCount: 0,
-          storageWarning: null,
+          clearStorageWarning: true,
         );
       }
     } catch (e) {
@@ -543,6 +547,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
         activeQueue: newQueue,
         pendingDeletionCount: newCount,
         storageWarning: newWarning,
+        clearStorageWarning: newWarning == null,
       );
     } catch (e) {
       debugPrint('Error restoring assets: $e');
@@ -569,6 +574,7 @@ class SwiperNotifier extends StateNotifier<SwiperState> {
           currentIndex: (state.currentIndex - resultIds.length).clamp(0, double.infinity).toInt(),
           pendingDeletionCount: pendingIds.length,
           storageWarning: pendingIds.length >= _pendingDeletionWarningThreshold ? state.storageWarning : null,
+          clearStorageWarning: pendingIds.length < _pendingDeletionWarningThreshold,
         );
       }
     } catch (e) {

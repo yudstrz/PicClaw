@@ -815,25 +815,34 @@ class GallerySwiperPage extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, SwiperState state, SwiperNotifier notifier) {
+    final bool isEmptyDueToFilterOrFolder = state.totalAssetCount == 0;
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.check_circle_outline_rounded,
-            color: Color(0xFF2ECA87),
+          Icon(
+            isEmptyDueToFilterOrFolder ? Icons.search_off_rounded : Icons.check_circle_outline_rounded,
+            color: isEmptyDueToFilterOrFolder ? Colors.white54 : const Color(0xFF2ECA87),
             size: 72,
           ),
           const SizedBox(height: 20),
           Text(
-            'Semua Bersih!',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
+            isEmptyDueToFilterOrFolder ? 'Tidak Ada Media' : 'Semua Bersih!',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Seluruh foto di galeri Anda telah selesai ditinjau.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              isEmptyDueToFilterOrFolder
+                  ? (state.dateFilter != null
+                      ? 'Tidak ditemukan ${state.requestType == RequestType.video ? "video" : "foto"} pada rentang tanggal yang dipilih. Silakan sesuaikan kembali filter tanggal Anda.'
+                      : 'Folder ini tidak memiliki ${state.requestType == RequestType.video ? "video" : "foto"} untuk ditinjau.')
+                  : 'Seluruh foto di galeri Anda telah selesai ditinjau.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            ),
           ),
           const SizedBox(height: 36),
           // PRINCIPLE 5: Error Prevention (Permanent deletion via separate final dialog approval or view queue details)
