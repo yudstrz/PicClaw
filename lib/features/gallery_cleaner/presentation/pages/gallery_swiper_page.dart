@@ -1,3 +1,5 @@
+import 'dart:io' as io;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -391,7 +393,7 @@ class GallerySwiperPage extends ConsumerWidget {
                                       Text(
                                         album.name,
                                         style: TextStyle(
-                                          color: isSelected ? Colors.white : Colors.white80,
+                                          color: isSelected ? Colors.white : Colors.white.withOpacity(0.8),
                                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                           fontSize: 14,
                                         ),
@@ -433,95 +435,118 @@ class GallerySwiperPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: const Color(0xFF14141B),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: Colors.white10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Detail Foto',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
+        return FutureBuilder<Map<String, dynamic>>(
+          future: () async {
+            final file = await asset.file;
+            final size = file != null ? await file.length() : 0;
+            final path = file?.path ?? 'Tidak diketahui';
+            Uint8List? thumbBytes;
+            if (asset.type == AssetType.video) {
+              thumbBytes = await asset.thumbnailDataWithSize(const ThumbnailSize(500, 500));
+            }
+            return {
+              'file': file,
+              'size': size,
+              'path': path,
+              'thumbBytes': thumbBytes,
+            };
+          }(),
+          builder: (context, snapshot) {
+            final loaded = snapshot.hasData;
+            final io.File? file = loaded ? snapshot.data!['file'] as io.File? : null;
+            final bytes = loaded ? snapshot.data!['size'] as int : 0;
+            final path = loaded ? snapshot.data!['path'] as String : 'Loading...';
+            final thumbBytes = loaded ? snapshot.data!['thumbBytes'] as Uint8List? : null;
+
+            String fileSizeText = 'Loading...';
+            if (loaded) {
+              if (bytes <= 0) fileSizeText = "0 B";
+              else if (bytes < 1024) fileSizeText = "$bytes B";
+              else if (bytes < 1024 * 1024) fileSizeText = "${(bytes / 1024).toStringAsFixed(1)} KB";
+              else if (bytes < 1024 * 1024 * 1024) fileSizeText = "${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB";
+              else fileSizeText = "${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB";
+            }
+
+            return Dialog(
+              backgroundColor: const Color(0xFF14141B),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(color: Colors.white10),
               ),
-              
-              // Full Resolution Zoomable Preview
-              Expanded(
-                child: Container(
-                  color: Colors.black26,
-                  child: InteractiveViewer(
-                    maxScale: 4.0,
-                    minScale: 0.8,
-                    child: Center(
-                      child: Image(
-                        image: AssetEntityImageProvider(asset, isOriginal: true),
-                        fit: BoxFit.contain,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5353)),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) => const Center(
-                          child: Icon(Icons.broken_image_rounded, color: Colors.white30, size: 64),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            asset.type == AssetType.video ? 'Detail Video' : 'Detail Foto',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Full Resolution Preview / Thumbnail
+                  Expanded(
+                    child: Container(
+                      color: Colors.black26,
+                      child: InteractiveViewer(
+                        maxScale: 4.0,
+                        minScale: 0.8,
+                        child: Center(
+                          child: asset.type == AssetType.video
+                              ? Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    if (thumbBytes != null)
+                                      Image.memory(
+                                        thumbBytes,
+                                        fit: BoxFit.contain,
+                                      )
+                                    else
+                                      const Icon(Icons.video_library_rounded, color: Colors.white30, size: 64),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.5),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(12),
+                                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
+                                    ),
+                                  ],
+                                )
+                              : file != null
+                                  ? Image.file(
+                                      file,
+                                      fit: BoxFit.contain,
+                                    )
+                                  : const Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF5353)),
+                                      ),
+                                    ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
 
-              // Metadata Information Panel
-              FutureBuilder<Map<String, dynamic>>(
-                future: () async {
-                  final file = await asset.file;
-                  final size = file != null ? await file.length() : 0;
-                  final path = file?.path ?? 'Tidak diketahui';
-                  return {
-                    'size': size,
-                    'path': path,
-                  };
-                }(),
-                builder: (context, snapshot) {
-                  final fileLoaded = snapshot.hasData;
-                  final bytes = fileLoaded ? snapshot.data!['size'] as int : 0;
-                  final path = fileLoaded ? snapshot.data!['path'] as String : 'Loading...';
-
-                  // Format file size
-                  String fileSizeText = 'Loading...';
-                  if (fileLoaded) {
-                    if (bytes <= 0) fileSizeText = "0 B";
-                    else if (bytes < 1024) fileSizeText = "$bytes B";
-                    else if (bytes < 1024 * 1024) fileSizeText = "${(bytes / 1024).toStringAsFixed(1)} KB";
-                    else if (bytes < 1024 * 1024 * 1024) fileSizeText = "${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB";
-                    else fileSizeText = "${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB";
-                  }
-
-                  return Container(
+                  // Metadata Information Panel
+                  Container(
                     padding: const EdgeInsets.all(20),
                     decoration: const BoxDecoration(
                       color: Color(0xFF1A1A24),
@@ -545,11 +570,11 @@ class GallerySwiperPage extends ConsumerWidget {
                         _buildDetailRow('Path Lokasi', path, isPath: true),
                       ],
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -1155,7 +1180,7 @@ class _FolderCoverThumbnail extends StatefulWidget {
 }
 
 class _FolderCoverThumbnailState extends State<_FolderCoverThumbnail> {
-  AssetEntity? _firstAsset;
+  Uint8List? _bytes;
   bool _loading = true;
 
   @override
@@ -1167,11 +1192,14 @@ class _FolderCoverThumbnailState extends State<_FolderCoverThumbnail> {
   Future<void> _loadCover() async {
     try {
       final assets = await widget.album.getAssetListRange(start: 0, end: 1);
-      if (mounted && assets.isNotEmpty) {
-        setState(() {
-          _firstAsset = assets.first;
-          _loading = false;
-        });
+      if (assets.isNotEmpty) {
+        final bytes = await assets.first.thumbnailDataWithSize(const ThumbnailSize(120, 120));
+        if (mounted) {
+          setState(() {
+            _bytes = bytes;
+            _loading = false;
+          });
+        }
       } else {
         if (mounted) setState(() => _loading = false);
       }
@@ -1203,7 +1231,7 @@ class _FolderCoverThumbnailState extends State<_FolderCoverThumbnail> {
       );
     }
 
-    if (_firstAsset == null) {
+    if (_bytes == null) {
       return Container(
         width: 54,
         height: 54,
@@ -1220,12 +1248,8 @@ class _FolderCoverThumbnailState extends State<_FolderCoverThumbnail> {
       child: SizedBox(
         width: 54,
         height: 54,
-        child: Image(
-          image: AssetEntityImageProvider(
-            _firstAsset!,
-            isOriginal: false,
-            thumbnailSize: const ThumbnailSize(120, 120),
-          ),
+        child: Image.memory(
+          _bytes!,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             color: Colors.white10,
