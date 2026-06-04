@@ -57,82 +57,88 @@ class GallerySwiperPage extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5353)),
-            const SizedBox(width: 8),
-            Text(
-              'PicClaw',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
+            const Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5353), size: 22),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'PicClaw',
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                      fontSize: 18,
+                    ),
+              ),
             ),
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 4.0),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_sweep_rounded,
-                    color: state.pendingDeletionCount > 0
-                        ? const Color(0xFFFF5353)
-                        : Colors.white30,
-                  ),
-                  tooltip: state.pendingDeletionCount > 0
-                      ? 'Hapus Permanen Pilihan (${state.pendingDeletionCount})'
-                      : 'Antrean Hapus Kosong',
-                  onPressed: state.pendingDeletionCount > 0
-                      ? () => _showPendingDeletionDetailBottomSheet(context, state, notifier)
-                      : null,
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  Icons.delete_sweep_rounded,
+                  color: state.pendingDeletionCount > 0
+                      ? const Color(0xFFFF5353)
+                      : Colors.white30,
+                  size: 22,
                 ),
-                if (state.pendingDeletionCount > 0)
-                  Positioned(
-                    right: 4,
-                    top: 8,
-                    child: IgnorePointer(
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF8B5CF6),
-                          shape: BoxShape.circle,
+                tooltip: state.pendingDeletionCount > 0
+                    ? 'Hapus Permanen Pilihan (${state.pendingDeletionCount})'
+                    : 'Antrean Hapus Kosong',
+                onPressed: state.pendingDeletionCount > 0
+                    ? () => _showPendingDeletionDetailBottomSheet(context, state, notifier)
+                    : null,
+              ),
+              if (state.pendingDeletionCount > 0)
+                Positioned(
+                  right: 4,
+                  top: 6,
+                  child: IgnorePointer(
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF8B5CF6),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '${state.pendingDeletionCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
                         ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '${state.pendingDeletionCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w900,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
           IconButton(
-            icon: const Icon(Icons.restart_alt_rounded, color: Colors.white54),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.restart_alt_rounded, color: Colors.white54, size: 22),
             tooltip: 'Mulai Ulang dari Foto Pertama',
             onPressed: () => _showResetProgressDialog(context, notifier),
           ),
           IconButton(
-            icon: const Icon(Icons.help_outline_rounded, color: Colors.white70),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.help_outline_rounded, color: Colors.white70, size: 22),
             tooltip: 'Panduan & Batasan',
             onPressed: () => _showHelpDialog(context),
           ),
           // Visibility of System Status: Privacy & Sandbox confirmation
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            margin: const EdgeInsets.only(left: 2, right: 8, top: 12, bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.green.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
@@ -141,20 +147,19 @@ class GallerySwiperPage extends ConsumerWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.shield_rounded, color: Colors.green, size: 14),
+                Icon(Icons.shield_rounded, color: Colors.green, size: 12),
                 SizedBox(width: 4),
                 Text(
                   '100% Offline',
                   style: TextStyle(
                     color: Colors.green,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
