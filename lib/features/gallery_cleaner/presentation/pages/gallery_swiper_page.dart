@@ -1247,6 +1247,34 @@ class GallerySwiperPage extends ConsumerWidget {
                         }
                       },
                     )
+                  else if (updateState.errorMessage != null)
+                    Column(
+                      children: [
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline_rounded, color: Colors.orange, size: 20),
+                            SizedBox(width: 8),
+                            Expanded(child: Text('Gagal terhubung ke server pembaruan.', style: TextStyle(color: Colors.orange))),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                          ),
+                          onPressed: () async {
+                            final Uri url = Uri.parse('https://github.com/yudstrz/PicClaw/releases');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          icon: const Icon(Icons.open_in_browser_rounded, size: 18),
+                          label: const Text('Cek Manual di GitHub'),
+                        )
+                      ],
+                    )
                   else
                     Column(
                       children: [
@@ -1259,15 +1287,19 @@ class GallerySwiperPage extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        OutlinedButton(
+                        OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
                             side: const BorderSide(color: Colors.white24),
                           ),
-                          onPressed: () {
-                            updateNotifier.checkForUpdates();
+                          onPressed: () async {
+                            final Uri url = Uri.parse('https://github.com/yudstrz/PicClaw/releases');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
                           },
-                          child: const Text('Cek Pembaruan Ulang'),
+                          icon: const Icon(Icons.open_in_browser_rounded, size: 18),
+                          label: const Text('Cek Manual di GitHub'),
                         )
                       ],
                     ),
